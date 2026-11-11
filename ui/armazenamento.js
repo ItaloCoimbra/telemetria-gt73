@@ -3,7 +3,7 @@
 const CHAVE_AJUSTES = "gt73.ajustes";
 const CHAVE_HISTORICO = "gt73.historico";
 export const HISTORICO_MAX = 50;
-export const AJUSTES_PADRAO = { sparkline: true, unidadeCarga: "carga", telaAcesa: true, chaveNuvem: "" };
+export const AJUSTES_PADRAO = { sparkline: true, unidadeCarga: "carga", telaAcesa: true, chaveNuvem: "", pontosCalibracao: [] };
 
 function ler(chave, padrao) {
   try {

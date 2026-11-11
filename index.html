@@ -114,6 +114,17 @@
         <button class="chave" id="ajWake" type="button" role="switch" aria-checked="true">Ligado</button>
       </div>
       <div class="bloco opcao opcao--coluna">
+        <span class="opcao__nome">Calibração da velocidade</span>
+        <p class="rodape">Ande em velocidade constante (ex.: máximo do modo 1 ou 2), digite a velocidade real do painel ou do GPS e toque em Registrar.</p>
+        <p class="cal__linha">App agora: <strong id="calApp">--</strong> km/h <small>(sem correção)</small></p>
+        <input class="campo campo--largo" id="calReal" type="text" inputmode="decimal" autocomplete="off" placeholder="velocidade real (km/h)">
+        <button class="botao botao--secundario" id="calRegistrar" type="button">Registrar ponto</button>
+        <p class="cal__linha">Fator: <strong id="calFator">1.000 · 0 ponto(s)</strong></p>
+        <p class="rodape" id="calPontos">Nenhum ponto ainda.</p>
+        <p class="rodape" id="calAviso" aria-live="polite"></p>
+        <button class="botao botao--secundario botao--perigo" id="calZerar" type="button">Zerar calibração</button>
+      </div>
+      <div class="bloco opcao opcao--coluna">
         <label class="opcao__nome" for="ajChave">Chave da nuvem</label>
         <input class="campo campo--largo" id="ajChave" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="cole a chave do Railway">
         <button class="botao botao--secundario" id="ajEnviar" type="button">Enviar agora</button>

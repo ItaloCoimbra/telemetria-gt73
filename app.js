@@ -5,8 +5,9 @@ import { lerAjustes, salvarAjustes, lerHistorico, adicionarViagem, apagarHistori
 import { desenharSparkline, desenharGrafico } from "./ui/graficos.js";
 import { iniciarAbas, renderizarHistorico } from "./ui/telas.js";
 import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar } from "./nuvem.js";
+import { fatorDosPontos, adicionarPonto, aplicarFator, mediaRecente } from "./calibracao.js";
 
-const VERSAO_APP = "2.1";
+const VERSAO_APP = "2.2";
 const SERVICO = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CARACTERISTICA = "0000ffec-0000-1000-8000-00805f9b34fb";
 const LIMITE_SEM_DADOS_MS = 2000;
@@ -15,6 +16,7 @@ const CARGA_ESCALA = 40; // escala estimada da barra: valores vistos até ~25 ac
 const SERIE_MS = 300000; // 5 min de histórico para os gráficos
 const RESUMO_INTERVALO_MS = 1000;
 const NUVEM_INTERVALO_MS = 60000;
+const JANELA_CALIBRACAO_MS = 2000; // média da velocidade do app nos últimos 2 s
 const REGEN_MIN_KMH = 3; // freio com a roda girando: o EABS está devolvendo energia
 
 const $ = (id) => document.getElementById(id);
@@ -25,6 +27,7 @@ const ids = [
   "vBateria", "vConsumo", "vAutonomia", "vMelhor20", "vMelhor40", "vAmostras", "legCarga", "grafico",
   "frames", "descartados", "histLista", "histVazio", "histApagar", "ajSpark", "ajUnidade", "ajWake", "versao",
   "ajChave", "ajEnviar", "ajNuvemStatus",
+  "calApp", "calReal", "calRegistrar", "calFator", "calPontos", "calZerar", "calAviso",
 ];
 const el = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -50,6 +53,7 @@ const estado = {
   desenhoPendente: false,
   nuvem: novoEstadoNuvem(crypto.randomUUID(), performance.timeOrigin),
   enviando: false,
+  brutas: [], // velocidade sem correção, para calibrar
 };
 
 const esperar = (ms = 0) => new Promise((r) => setTimeout(r, ms));
@@ -146,8 +150,10 @@ function aoDecodificar({ data }) {
   estado.ocupado = false;
   try {
     if (!data.frame) throw new Error("sem solucao");
-    const dados = interpretar(data.frame);
     const t = performance.now();
+    const lido = interpretar(data.frame);
+    guardarBruta(lido.velocidadeKmh, t);
+    const dados = aplicarFator(lido, fatorDosPontos(estado.ajustes.pontosCalibracao));
     estado.frames++;
     registrar(estado.viagem, dados, t);
     guardarSerie(dados, t);
@@ -173,6 +179,7 @@ function verificarSemDados() {
   const parado = performance.now() - estado.ultimoDado > LIMITE_SEM_DADOS_MS;
   el.semdados.hidden = !(conectado && parado);
   atualizarViagemLimitado();
+  if (estado.aba === "ajustes") mostrarCalibracao();
   pedirDesenho(); // faz o gráfico "andar" mesmo sem dados novos
 }
 
@@ -284,6 +291,45 @@ function salvarViagem() {
   return true;
 }
 
+// ---------- Calibração da velocidade ----------
+function guardarBruta(v, t) {
+  estado.brutas.push({ t, v });
+  while (estado.brutas.length && estado.brutas[0].t < t - 5000) estado.brutas.shift();
+}
+
+function velocidadeAppAgora() {
+  return mediaRecente(estado.brutas, performance.now(), JANELA_CALIBRACAO_MS);
+}
+
+function mostrarCalibracao() {
+  const app = velocidadeAppAgora();
+  el.calApp.textContent = app === null ? VAZIO : numero(app, 1);
+  const pontos = estado.ajustes.pontosCalibracao ?? [];
+  el.calFator.textContent = `${fatorDosPontos(pontos).toFixed(3)} · ${pontos.length} ponto(s)`;
+  el.calPontos.textContent = pontos.map((p) => `real ${numero(p.real, 1)} / app ${numero(p.app, 1)}`).join(" · ") || "Nenhum ponto ainda.";
+}
+
+function registrarPontoCalibracao() {
+  try {
+    const app = velocidadeAppAgora();
+    const real = Number(String(el.calReal.value).replace(",", "."));
+    const pontos = adicionarPonto(estado.ajustes.pontosCalibracao, real, app ?? 0);
+    mudarAjuste({ pontosCalibracao: pontos });
+    el.calReal.value = "";
+    el.calAviso.textContent = "Ponto registrado.";
+  } catch (erro) {
+    el.calAviso.textContent = erro.message;
+  }
+  mostrarCalibracao();
+}
+
+function zerarCalibracao() {
+  if (!confirm("Apagar os pontos de calibração e voltar ao fator 1?")) return;
+  mudarAjuste({ pontosCalibracao: [] });
+  el.calAviso.textContent = "";
+  mostrarCalibracao();
+}
+
 // ---------- Nuvem (Railway) ----------
 function statusNuvem(texto) {
   el.ajNuvemStatus.textContent = texto;
@@ -393,6 +439,7 @@ function aoTrocarAba(nome) {
   estado.aba = nome;
   if (nome === "viagem") atualizarViagem();
   if (nome === "historico") mostrarHistorico();
+  if (nome === "ajustes") mostrarCalibracao();
   pedirDesenho();
 }
 
@@ -418,6 +465,8 @@ function ligarEventos() {
     sincronizar();
   });
   el.ajEnviar.addEventListener("click", sincronizar);
+  el.calRegistrar.addEventListener("click", registrarPontoCalibracao);
+  el.calZerar.addEventListener("click", zerarCalibracao);
   window.addEventListener("resize", pedirDesenho);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") pedirWakeLock();
