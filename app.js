@@ -4,8 +4,9 @@ import { numero, porcento, tempo, bateriaInicioAtual, nivelBateria, VAZIO } from
 import { lerAjustes, salvarAjustes, lerHistorico, adicionarViagem, apagarHistorico } from "./ui/armazenamento.js";
 import { desenharSparkline, desenharGrafico } from "./ui/graficos.js";
 import { iniciarAbas, renderizarHistorico } from "./ui/telas.js";
+import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar } from "./nuvem.js";
 
-const VERSAO_APP = "2.0";
+const VERSAO_APP = "2.1";
 const SERVICO = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CARACTERISTICA = "0000ffec-0000-1000-8000-00805f9b34fb";
 const LIMITE_SEM_DADOS_MS = 2000;
@@ -13,6 +14,8 @@ const ESPERAS_RECONEXAO_MS = [1000, 2000, 4000, 10000];
 const CARGA_ESCALA = 40; // escala estimada da barra: valores vistos até ~25 acelerando forte
 const SERIE_MS = 300000; // 5 min de histórico para os gráficos
 const RESUMO_INTERVALO_MS = 1000;
+const NUVEM_INTERVALO_MS = 60000;
+const REGEN_MIN_KMH = 3; // freio com a roda girando: o EABS está devolvendo energia
 
 const $ = (id) => document.getElementById(id);
 const ids = [
@@ -21,6 +24,7 @@ const ids = [
   "vDistancia", "vTempoMov", "vTempoTotal", "vMedia", "vMaxima", "vFreadas", "vCargaMax", "vCargaUn",
   "vBateria", "vConsumo", "vAutonomia", "vMelhor20", "vMelhor40", "vAmostras", "legCarga", "grafico",
   "frames", "descartados", "histLista", "histVazio", "histApagar", "ajSpark", "ajUnidade", "ajWake", "versao",
+  "ajChave", "ajEnviar", "ajNuvemStatus",
 ];
 const el = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -44,6 +48,8 @@ const estado = {
   aba: "painel",
   ajustes: lerAjustes(),
   desenhoPendente: false,
+  nuvem: novoEstadoNuvem(crypto.randomUUID(), performance.timeOrigin),
+  enviando: false,
 };
 
 const esperar = (ms = 0) => new Promise((r) => setTimeout(r, ms));
@@ -68,7 +74,10 @@ function atualizarBateria(pct) {
 
 function atualizarLeitura(dados) {
   el.velocidade.textContent = String(Math.round(dados.velocidadeKmh));
+  const regen = dados.freio && dados.velocidadeKmh >= REGEN_MIN_KMH;
   el.freio.classList.toggle("ativo", dados.freio);
+  el.freio.classList.toggle("regen", regen);
+  el.freio.textContent = regen ? "FREIO · REGEN" : "FREIO";
   el.cargaA.textContent = String(dados.cargaA);
   el.cargaB.textContent = String(dados.cargaB);
   el.barra.style.width = `${Math.min(100, (dados.cargaA / CARGA_ESCALA) * 100)}%`;
@@ -275,10 +284,42 @@ function salvarViagem() {
   return true;
 }
 
-function zerarViagem() {
+// ---------- Nuvem (Railway) ----------
+function statusNuvem(texto) {
+  el.ajNuvemStatus.textContent = texto;
+}
+
+async function sincronizar() {
+  const chave = estado.ajustes.chaveNuvem;
+  if (!chave) return statusNuvem("Nuvem desligada: cole a chave acima.");
+  if (estado.enviando || !estado.viagem.amostras.length) return;
+  estado.enviando = true;
+  const envio = prepararEnvio(estado.nuvem, estado.viagem.amostras, resumo(estado.viagem), performance.timeOrigin, VERSAO_APP);
+  try {
+    await enviar(API_PADRAO, chave, envio);
+    confirmarEnvio(estado.nuvem, envio);
+    statusNuvem(`Sincronizado às ${new Date().toLocaleTimeString("pt-BR")} (${envio.lote.length} amostras novas)`);
+  } catch (erro) {
+    statusNuvem(`Sem envio agora (${erro?.message ?? erro}). Tento de novo em 1 min.`);
+  } finally {
+    estado.enviando = false;
+  }
+}
+
+function lerChaveDaUrl() {
+  const m = location.hash.match(/chave=([0-9a-f]{16,128})/i);
+  if (!m) return;
+  estado.ajustes = { ...estado.ajustes, chaveNuvem: m[1] };
+  salvarAjustes(estado.ajustes);
+  history.replaceState(null, "", location.pathname + location.search);
+}
+
+async function zerarViagem() {
   if (!confirm("Zerar os dados desta viagem? O resumo será salvo no histórico.")) return;
   const r = resumo(estado.viagem);
   if (r.amostras) adicionarViagem(r);
+  await sincronizar();
+  estado.nuvem = novoEstadoNuvem(crypto.randomUUID(), performance.timeOrigin);
   estado.viagem = novaViagem();
   estado.serie = [];
   estado.frames = 0;
@@ -325,6 +366,7 @@ function aplicarAjustes() {
   el.legCarga.textContent = unidadeCarga;
   el.vCargaUn.textContent = unidadeCarga;
   el.ajUnidade.value = unidadeCarga;
+  el.ajChave.value = estado.ajustes.chaveNuvem;
   pintarChave(el.ajSpark, sparkline);
   pintarChave(el.ajWake, telaAcesa);
   pedirDesenho();
@@ -371,9 +413,15 @@ function ligarEventos() {
   el.ajSpark.addEventListener("click", () => mudarAjuste({ sparkline: !estado.ajustes.sparkline }));
   el.ajWake.addEventListener("click", alternarWake);
   el.ajUnidade.addEventListener("change", aoMudarUnidade);
+  el.ajChave.addEventListener("change", () => {
+    mudarAjuste({ chaveNuvem: el.ajChave.value.trim() });
+    sincronizar();
+  });
+  el.ajEnviar.addEventListener("click", sincronizar);
   window.addEventListener("resize", pedirDesenho);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") pedirWakeLock();
+    else sincronizar(); // indo para o fundo: tenta mandar o que falta
   });
 }
 
@@ -384,12 +432,15 @@ function iniciar() {
   }
   estado.decodificador.onmessage = aoDecodificar;
   el.versao.textContent = VERSAO_APP;
+  lerChaveDaUrl();
   iniciarAbas(aoTrocarAba);
   ligarEventos();
   aplicarAjustes();
   atualizarBateria(undefined);
   el.autonomia.textContent = VAZIO;
   setInterval(verificarSemDados, 500);
+  setInterval(sincronizar, NUVEM_INTERVALO_MS);
+  sincronizar();
   atualizarViagem();
   mostrarHistorico();
   pedirWakeLock();

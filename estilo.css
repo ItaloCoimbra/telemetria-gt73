@@ -190,3 +190,8 @@ button, input { font: inherit; }
   .aba--painel .botao { grid-area: conectar; min-height: 48px; }
   .nav__item { min-height: 48px; flex-direction: row; justify-content: center; gap: 8px; }
 }
+
+/* nuvem e regen */
+.opcao--coluna { flex-direction: column; align-items: stretch; gap: 10px; }
+.campo--largo { width: 100%; }
+.freio.regen { background: #16a34a; border-color: #fff; box-shadow: 0 0 24px #16a34a99; }

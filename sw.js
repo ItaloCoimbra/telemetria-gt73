@@ -1,4 +1,4 @@
-const VERSAO = "gt73-v3";
+const VERSAO = "gt73-v4";
 const ARQUIVOS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ARQUIVOS = [
   "./painel.js",
   "./viagem.js",
   "./decodificador.js",
+  "./nuvem.js",
   "./estilo.css",
   "./manifest.webmanifest",
   "./ui/formato.js",
