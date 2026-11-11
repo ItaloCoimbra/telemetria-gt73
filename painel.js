@@ -166,6 +166,8 @@ export function interpretar(frame) {
     cargaB: frame[7],
     status: frame[4],
     freio: (frame[4] & BITS_FREIO) !== 0,
+    bateriaPct: frame[10], // bateu com o SOC da controladora (80 % = 0x50)
+    bruto: Uint8Array.from(frame),
   };
 }
 

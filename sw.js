@@ -1,4 +1,4 @@
-const VERSAO = "gt73-v2";
+const VERSAO = "gt73-v3";
 const ARQUIVOS = [
   "./",
   "./index.html",
@@ -8,7 +8,16 @@ const ARQUIVOS = [
   "./decodificador.js",
   "./estilo.css",
   "./manifest.webmanifest",
-  "./icone.svg",
+  "./ui/formato.js",
+  "./ui/armazenamento.js",
+  "./ui/graficos.js",
+  "./ui/telas.js",
+  "./icones/icone.svg",
+  "./icones/icone-180.png",
+  "./icones/icone-192.png",
+  "./icones/icone-512.png",
+  "./icones/icone-maskable-192.png",
+  "./icones/icone-maskable-512.png",
 ];
 
 self.addEventListener("install", (evento) => {

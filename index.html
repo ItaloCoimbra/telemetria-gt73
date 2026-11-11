@@ -5,52 +5,138 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="GT73">
 <title>Telemetria GT73</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="icon" href="icones/icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
 <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
-<main class="painel" id="painel" data-estado="desconectado">
+<div class="app" id="app" data-estado="desconectado">
   <header class="topo">
     <span class="status" id="status" role="status" aria-live="polite">Desconectado</span>
     <span class="semdados" id="semdados" hidden>SEM DADOS</span>
   </header>
-
   <p class="aviso" id="aviso" hidden></p>
 
-  <section class="velocidade" aria-label="Velocidade">
-    <span class="velocidade__valor" id="velocidade">--</span>
-    <span class="velocidade__unidade">km/h</span>
-  </section>
+  <main class="abas">
+    <!-- PAINEL -->
+    <section class="aba aba--painel" id="aba-painel" role="tabpanel" aria-label="Painel">
+      <div class="velocidade" aria-label="Velocidade">
+        <span class="velocidade__valor" id="velocidade">--</span>
+        <span class="velocidade__unidade">km/h</span>
+      </div>
 
-  <div class="freio" id="freio" aria-live="polite">FREIO</div>
+      <div class="freio" id="freio" aria-live="polite">FREIO</div>
 
-  <section class="carga" aria-label="Carga">
-    <div class="carga__linha">
-      <span class="rotulo">Carga</span>
-      <span class="carga__valores"><strong id="cargaA">--</strong><small id="cargaB">--</small></span>
-    </div>
-    <div class="barra"><div class="barra__preenchimento" id="barra"></div></div>
-  </section>
+      <div class="linha2">
+        <div class="bloco bateria" id="bateria" data-nivel="nenhum">
+          <div class="bloco__cab"><span class="rotulo">Bateria</span><strong id="bateriaPct">--</strong></div>
+          <div class="barra"><div class="barra__preenchimento" id="bateriaBarra"></div></div>
+        </div>
+        <div class="bloco autonomia">
+          <span class="rotulo">Autonomia</span>
+          <span class="autonomia__valor"><strong id="autonomia">--</strong><small>km</small></span>
+        </div>
+      </div>
 
-  <section class="grade" aria-label="Viagem">
-    <div class="cartao"><span class="rotulo">Distância</span><strong id="distancia">0.00</strong><small>km</small></div>
-    <div class="cartao"><span class="rotulo">Tempo</span><strong id="tempo">00:00</strong><small>andando</small></div>
-    <div class="cartao"><span class="rotulo">Média</span><strong id="media">0</strong><small>km/h</small></div>
-    <div class="cartao"><span class="rotulo">Máxima</span><strong id="maxima">0</strong><small>km/h</small></div>
-    <div class="cartao"><span class="rotulo">Freadas</span><strong id="freadas">0</strong></div>
-    <div class="cartao"><span class="rotulo">Carga máx</span><strong id="cargaMax">0</strong></div>
-  </section>
+      <div class="bloco carga">
+        <div class="bloco__cab">
+          <span class="rotulo" id="cargaRotulo">Carga</span>
+          <span class="carga__valores"><strong id="cargaA">--</strong><small id="cargaB">--</small></span>
+        </div>
+        <div class="barra"><div class="barra__preenchimento barra--carga" id="barra"></div></div>
+      </div>
 
-  <p class="rodape"><span id="frames">0</span> frames · <span id="descartados">0</span> descartados</p>
+      <canvas class="spark" id="spark" aria-label="Velocidade dos últimos 60 segundos"></canvas>
 
-  <div class="acoes">
-    <button class="botao botao--secundario" id="exportar" type="button">Exportar CSV</button>
-    <button class="botao botao--secundario" id="zerar" type="button">Zerar viagem</button>
-  </div>
-  <button class="botao" id="conectar" type="button">Conectar</button>
-</main>
+      <button class="botao" id="conectar" type="button">Conectar</button>
+    </section>
+
+    <!-- VIAGEM -->
+    <section class="aba aba--rolavel" id="aba-viagem" role="tabpanel" aria-label="Viagem" hidden>
+      <h1 class="titulo">Viagem atual</h1>
+      <div class="grade">
+        <div class="cartao"><span class="rotulo">Distância</span><strong id="vDistancia">--</strong><small>km</small></div>
+        <div class="cartao"><span class="rotulo">Andando</span><strong id="vTempoMov">--</strong><small>tempo</small></div>
+        <div class="cartao"><span class="rotulo">Total</span><strong id="vTempoTotal">--</strong><small>tempo</small></div>
+        <div class="cartao"><span class="rotulo">Média</span><strong id="vMedia">--</strong><small>km/h</small></div>
+        <div class="cartao"><span class="rotulo">Máxima</span><strong id="vMaxima">--</strong><small>km/h</small></div>
+        <div class="cartao"><span class="rotulo">Freadas</span><strong id="vFreadas">--</strong><small>vezes</small></div>
+        <div class="cartao"><span class="rotulo">Carga máx</span><strong id="vCargaMax">--</strong><small id="vCargaUn">carga</small></div>
+        <div class="cartao"><span class="rotulo">Bateria</span><strong id="vBateria">--</strong><small>início → atual</small></div>
+        <div class="cartao"><span class="rotulo">Consumo</span><strong id="vConsumo">--</strong><small>%/km</small></div>
+        <div class="cartao"><span class="rotulo">Autonomia</span><strong id="vAutonomia">--</strong><small>km</small></div>
+        <div class="cartao"><span class="rotulo">0–20 km/h</span><strong id="vMelhor20">--</strong><small>melhor (s)</small></div>
+        <div class="cartao"><span class="rotulo">0–40 km/h</span><strong id="vMelhor40">--</strong><small>melhor (s)</small></div>
+      </div>
+
+      <div class="bloco grafico">
+        <div class="bloco__cab">
+          <span class="rotulo">Últimos 5 min</span>
+          <span class="legenda"><i class="leg leg--vel"></i>velocidade <i class="leg leg--carga"></i><span id="legCarga">carga</span></span>
+        </div>
+        <canvas id="grafico" aria-label="Velocidade e carga dos últimos 5 minutos"></canvas>
+      </div>
+
+      <p class="rodape"><span id="frames">0</span> frames · <span id="descartados">0</span> descartados · <span id="vAmostras">0</span> amostras</p>
+
+      <div class="acoes">
+        <button class="botao botao--secundario" id="exportar" type="button">Exportar CSV</button>
+        <button class="botao botao--secundario" id="salvar" type="button">Salvar viagem</button>
+        <button class="botao botao--secundario botao--perigo botao--largo" id="zerar" type="button">Zerar viagem</button>
+      </div>
+    </section>
+
+    <!-- HISTORICO -->
+    <section class="aba aba--rolavel" id="aba-historico" role="tabpanel" aria-label="Histórico" hidden>
+      <h1 class="titulo">Histórico</h1>
+      <p class="vazio" id="histVazio">Nenhuma viagem salva ainda.</p>
+      <ul class="lista" id="histLista"></ul>
+      <button class="botao botao--secundario botao--perigo" id="histApagar" type="button">Apagar histórico</button>
+    </section>
+
+    <!-- AJUSTES -->
+    <section class="aba aba--rolavel" id="aba-ajustes" role="tabpanel" aria-label="Ajustes" hidden>
+      <h1 class="titulo">Ajustes</h1>
+      <div class="bloco opcao">
+        <span class="opcao__nome">Mini-gráfico no Painel</span>
+        <button class="chave" id="ajSpark" type="button" role="switch" aria-checked="true">Ligado</button>
+      </div>
+      <div class="bloco opcao">
+        <label class="opcao__nome" for="ajUnidade">Unidade da carga</label>
+        <input class="campo" id="ajUnidade" type="text" maxlength="8" value="carga" autocomplete="off" autocapitalize="off">
+      </div>
+      <div class="bloco opcao">
+        <span class="opcao__nome">Tela sempre acesa</span>
+        <button class="chave" id="ajWake" type="button" role="switch" aria-checked="true">Ligado</button>
+      </div>
+      <div class="bloco texto">
+        <p><strong>Este app só escuta.</strong> Ele nunca envia nada para a moto.</p>
+        <p>Use a ligação "só ouvindo" e feche o Worthless antes de conectar.</p>
+        <p>iPhone: abra no Bluefy. Android: use o Chrome.</p>
+      </div>
+      <p class="rodape">Telemetria GT73 · versão <span id="versao">2.0</span></p>
+    </section>
+  </main>
+
+  <nav class="nav" role="tablist" aria-label="Seções">
+    <button class="nav__item" role="tab" data-aba="painel" aria-selected="true" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18a8 8 0 1 1 16 0M12 18l4-6"/></svg><span>Painel</span>
+    </button>
+    <button class="nav__item" role="tab" data-aba="viagem" aria-selected="false" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-7"/></svg><span>Viagem</span>
+    </button>
+    <button class="nav__item" role="tab" data-aba="historico" aria-selected="false" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v5l3 2M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/></svg><span>Histórico</span>
+    </button>
+    <button class="nav__item" role="tab" data-aba="ajustes" aria-selected="false" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6"/></svg><span>Ajustes</span>
+    </button>
+  </nav>
+</div>
 <script type="module" src="app.js"></script>
 </body>
 </html>
