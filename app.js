@@ -4,10 +4,10 @@ import { numero, porcento, tempo, bateriaInicioAtual, nivelBateria, VAZIO } from
 import { lerAjustes, salvarAjustes, lerHistorico, adicionarViagem, apagarHistorico } from "./ui/armazenamento.js";
 import { desenharSparkline, desenharGrafico } from "./ui/graficos.js";
 import { iniciarAbas, renderizarHistorico } from "./ui/telas.js";
-import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar, testarChave } from "./nuvem.js";
+import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar, testarChave, linhasAnalise, buscarAnalise } from "./nuvem.js";
 import { fatorDosPontos, adicionarPonto, aplicarFator, mediaRecente } from "./calibracao.js";
 
-const VERSAO_APP = "2.3";
+const VERSAO_APP = "2.4";
 const SERVICO = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CARACTERISTICA = "0000ffec-0000-1000-8000-00805f9b34fb";
 const LIMITE_SEM_DADOS_MS = 2000;
@@ -28,6 +28,7 @@ const ids = [
   "frames", "descartados", "histLista", "histVazio", "histApagar", "ajSpark", "ajUnidade", "ajWake", "versao",
   "ajChave", "ajEnviar", "ajNuvemStatus",
   "calApp", "calReal", "calRegistrar", "calFator", "calPontos", "calZerar", "calAviso",
+  "nuvemLinhas", "nuvemAtualizar",
 ];
 const el = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -356,6 +357,21 @@ async function sincronizar(manual = false) {
   }
 }
 
+function mostrarLinhasNuvem(linhas) {
+  el.nuvemLinhas.replaceChildren(...linhas.map((texto) => Object.assign(document.createElement("li"), { textContent: texto })));
+}
+
+async function carregarAnalise() {
+  const chave = estado.ajustes.chaveNuvem;
+  if (!chave) return mostrarLinhasNuvem(["Cole a chave da nuvem em Ajustes para ver a análise."]);
+  mostrarLinhasNuvem(["Carregando..."]);
+  try {
+    mostrarLinhasNuvem(linhasAnalise(await buscarAnalise(API_PADRAO, chave)));
+  } catch (erro) {
+    mostrarLinhasNuvem([`Sem análise agora: ${erro?.message ?? erro}`]);
+  }
+}
+
 async function conferirChave(chave) {
   statusNuvem("Conferindo a chave...");
   try {
@@ -453,7 +469,10 @@ function aoMudarUnidade() {
 function aoTrocarAba(nome) {
   estado.aba = nome;
   if (nome === "viagem") atualizarViagem();
-  if (nome === "historico") mostrarHistorico();
+  if (nome === "historico") {
+    mostrarHistorico();
+    carregarAnalise();
+  }
   if (nome === "ajustes") mostrarCalibracao();
   pedirDesenho();
 }
@@ -482,6 +501,7 @@ function ligarEventos() {
   el.ajEnviar.addEventListener("click", () => sincronizar(true));
   el.calRegistrar.addEventListener("click", registrarPontoCalibracao);
   el.calZerar.addEventListener("click", zerarCalibracao);
+  el.nuvemAtualizar.addEventListener("click", carregarAnalise);
   window.addEventListener("resize", pedirDesenho);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") pedirWakeLock();

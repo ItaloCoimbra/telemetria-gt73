@@ -197,3 +197,5 @@ button, input { font: inherit; }
 .freio.regen { background: #16a34a; border-color: #fff; box-shadow: 0 0 24px #16a34a99; }
 .cal__linha { margin: 0; font-size: 1.05rem; }
 .cal__linha strong { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.subtitulo { margin: 8px 0 0; font-size: 1.05rem; color: var(--suave); text-transform: uppercase; letter-spacing: .08em; }
+.nuvem__linhas { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 1.05rem; line-height: 1.35; }

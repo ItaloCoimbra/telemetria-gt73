@@ -63,3 +63,35 @@ export async function testarChave(endpoint, chave) {
   const r = await fetch(`${endpoint.replace(/\/+$/, "")}/viagens`, { headers: { Authorization: `Bearer ${chave}` } });
   return r.ok;
 }
+
+const br = (n, casas) => Number(n).toFixed(casas).replace(".", ",");
+const temNumero = (v) => v !== null && v !== undefined && Number.isFinite(Number(v));
+
+/** Linhas de texto da análise geral devolvida por GET /analise. */
+export function linhasAnalise(api) {
+  const t = api?.totais ?? {};
+  const n = Number(t.viagens ?? 0);
+  const linhas = [`${n} ${n === 1 ? "viagem" : "viagens"} · ${br(t.km ?? 0, 1)} km · ${br(t.horas_andando ?? 0, 1)} h andando`];
+  if (temNumero(t.maxima_kmh)) linhas.push(`Máxima registrada: ${br(t.maxima_kmh, 0)} km/h`);
+  if (!temNumero(t.consumo_pct_km)) {
+    linhas.push("Consumo e autonomia aparecem depois de viagens com pelo menos 0,5 km e queda de bateria.");
+    return linhas;
+  }
+  linhas.push(`Consumo médio: ${br(t.consumo_pct_km, 2)} %/km`);
+  if (temNumero(api.autonomia_100_a_0_km)) {
+    linhas.push(`Autonomia estimada (100 % → 0): ${br(Math.floor(api.autonomia_100_a_0_km), 0)} km`);
+  }
+  for (const f of api.por_velocidade_media ?? []) {
+    if (temNumero(f.consumo_pct_km)) {
+      linhas.push(`Média ${f.faixa_media_kmh} km/h: ${br(f.consumo_pct_km, 2)} %/km em ${br(f.km, 1)} km`);
+    }
+  }
+  return linhas;
+}
+
+/** Busca a análise geral na API. */
+export async function buscarAnalise(endpoint, chave) {
+  const r = await fetch(`${endpoint.replace(/\/+$/, "")}/analise`, { headers: { Authorization: `Bearer ${chave}` } });
+  if (!r.ok) throw new Error(`análise indisponível (${r.status})`);
+  return r.json();
+}
