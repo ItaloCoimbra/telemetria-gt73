@@ -7,7 +7,7 @@ import { iniciarAbas, renderizarHistorico } from "./ui/telas.js";
 import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar, testarChave, linhasAnalise, buscarAnalise } from "./nuvem.js";
 import { fatorDosPontos, adicionarPonto, aplicarFator, mediaRecente } from "./calibracao.js";
 
-const VERSAO_APP = "2.4";
+const VERSAO_APP = "2.5";
 const SERVICO = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CARACTERISTICA = "0000ffec-0000-1000-8000-00805f9b34fb";
 const LIMITE_SEM_DADOS_MS = 2000;
@@ -28,7 +28,7 @@ const ids = [
   "frames", "descartados", "histLista", "histVazio", "histApagar", "ajSpark", "ajUnidade", "ajWake", "versao",
   "ajChave", "ajEnviar", "ajNuvemStatus",
   "calApp", "calReal", "calRegistrar", "calFator", "calPontos", "calZerar", "calAviso",
-  "nuvemLinhas", "nuvemAtualizar",
+  "nuvemLinhas", "nuvemAtualizar", "vSemDados",
 ];
 const el = Object.fromEntries(ids.map((id) => [id, $(id)]));
 
@@ -55,6 +55,7 @@ const estado = {
   nuvem: novoEstadoNuvem(crypto.randomUUID(), performance.timeOrigin),
   enviando: false,
   brutas: [], // velocidade sem correção, para calibrar
+  reconectando: false,
 };
 
 const esperar = (ms = 0) => new Promise((r) => setTimeout(r, ms));
@@ -104,6 +105,7 @@ function atualizarViagem() {
   el.vDistancia.textContent = numero(r.distanciaKm, 2);
   el.vTempoMov.textContent = tempo(r.tempoMovS);
   el.vTempoTotal.textContent = tempo(r.tempoTotalS);
+  el.vSemDados.textContent = tempo(r.tempoSemDadosS);
   el.vMedia.textContent = numero(r.mediaKmh, 0);
   el.vMaxima.textContent = numero(r.maximaKmh, 0);
   el.vFreadas.textContent = numero(r.freadas, 0);
@@ -237,6 +239,28 @@ function aoDesconectar() {
 }
 
 async function reconectar() {
+  if (estado.reconectando) return;
+  estado.reconectando = true;
+  try {
+    await tentarReconectar();
+  } finally {
+    estado.reconectando = false;
+  }
+}
+
+// Ao voltar do segundo plano o iOS pode ter derrubado o Bluetooth sem avisar: se os dados não voltarem, reconecta.
+function verificarRetomada() {
+  const semDados = performance.now() - estado.ultimoDado > LIMITE_SEM_DADOS_MS;
+  if (!estado.dispositivo || estado.desconexaoManual || !semDados) return;
+  try {
+    estado.dispositivo.gatt.disconnect();
+  } catch {
+    // já estava desconectado
+  }
+  reconectar();
+}
+
+async function tentarReconectar() {
   while (!estado.desconexaoManual && !estado.dispositivo.gatt.connected) {
     const espera = ESPERAS_RECONEXAO_MS[Math.min(estado.tentativa, ESPERAS_RECONEXAO_MS.length - 1)];
     estado.tentativa++;
@@ -504,8 +528,12 @@ function ligarEventos() {
   el.nuvemAtualizar.addEventListener("click", carregarAnalise);
   window.addEventListener("resize", pedirDesenho);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible") pedirWakeLock();
-    else sincronizar(); // indo para o fundo: tenta mandar o que falta
+    if (document.visibilityState === "visible") {
+      pedirWakeLock();
+      setTimeout(verificarRetomada, 3000);
+    } else {
+      sincronizar(); // indo para o fundo: tenta mandar o que falta
+    }
   });
 }
 

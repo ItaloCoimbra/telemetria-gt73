@@ -10,7 +10,7 @@ const TOLERANCIA_KMH = 2; // oscilação de leitura que não cancela a arrancada
 
 export function novaViagem() {
   return {
-    amostras: [], distKm: 0, movMs: 0, totalMs: 0, maxima: 0, freadas: 0, cargaMax: 0,
+    amostras: [], distKm: 0, movMs: 0, totalMs: 0, semDadosMs: 0, maxima: 0, freadas: 0, cargaMax: 0,
     ultimoT: null, ultimaV: 0, freioAntes: false,
     bateriaInicio: null, bateriaAtual: null,
     arrancada: null, // { t0, atingidas } desde a última amostra parada
@@ -21,6 +21,7 @@ export function novaViagem() {
 function integrar(v, t) {
   if (v.ultimoT === null) return;
   const dt = t - v.ultimoT;
+  if (dt > LACUNA_MAX_MS) v.semDadosMs += dt; // app em segundo plano ou Bluetooth fora: não conta distância
   if (dt <= 0 || dt > LACUNA_MAX_MS) return;
   v.totalMs += dt;
   if (v.ultimaV > 0) {
@@ -101,6 +102,7 @@ export function resumo(v) {
     autonomiaKm: consumoPctKm === null ? null : v.bateriaAtual / consumoPctKm,
     melhor0a20S: v.melhores[20],
     melhor0a40S: v.melhores[40],
+    tempoSemDadosS: v.semDadosMs / 1000,
   };
 }
 

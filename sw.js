@@ -1,4 +1,4 @@
-const VERSAO = "gt73-v7";
+const VERSAO = "gt73-v8";
 const ARQUIVOS = [
   "./",
   "./index.html",
