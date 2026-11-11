@@ -1,0 +1,134 @@
+:root {
+  --fundo: #000;
+  --texto: #fff;
+  --suave: #c9c9d1;   /* era #8b8b94: contraste ~12:1 sobre #000, legivel sob sol */
+  --cartao: #17171e;
+  --borda: #3a3a46;
+  --acento: #22d3ee;
+  --ok: #4ade80;
+  --alerta: #fbbf24;
+  --perigo: #ef4444;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--fundo); color: var(--texto); }
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation; /* sem zoom por toque duplo */
+}
+/* Mobile primeiro: tela retrato cabe em 100dvh sem rolagem; rolagem so como rede de seguranca. */
+.painel {
+  height: 100dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+           max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  max-width: 560px;
+  margin: 0 auto;
+}
+.topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 36px; flex: none; }
+.status {
+  font-size: 1.05rem; font-weight: 700; padding: 6px 14px; border-radius: 999px;
+  background: var(--cartao); color: var(--suave); border: 1px solid var(--borda);
+}
+.painel[data-estado="conectado"] .status { color: var(--ok); border-color: var(--ok); }
+.painel[data-estado="conectando"] .status,
+.painel[data-estado="reconectando"] .status { color: var(--alerta); border-color: var(--alerta); }
+/* SEM DADOS: selo solido amarelo, impossivel de ignorar */
+.semdados {
+  background: var(--alerta); color: #000; font-weight: 900; font-size: 1.15rem;
+  letter-spacing: .06em; padding: 6px 14px; border-radius: 10px;
+  animation: piscar 1s steps(2) infinite;
+}
+.aviso {
+  margin: 0; padding: 10px 12px; border-radius: 12px; background: #4a1d1d; flex: none;
+  border: 2px solid var(--perigo); font-size: 1.05rem; line-height: 1.3; font-weight: 600;
+}
+.velocidade { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.velocidade__valor {
+  font-size: clamp(5.5rem, min(36vw, 20dvh), 11rem); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -.03em;
+}
+.velocidade__unidade { font-size: 1.3rem; color: var(--suave); font-weight: 700; }
+/* Sem dados: a velocidade mostrada e velha, entao apaga */
+.topo:has(.semdados:not([hidden])) ~ .velocidade { opacity: .3; }
+.freio {
+  flex: none; text-align: center; font-size: 1.6rem; font-weight: 900; letter-spacing: .12em;
+  padding: 10px; border-radius: 14px; background: var(--cartao); color: #8d8d98;
+  border: 2px dashed var(--borda);
+}
+.freio.ativo {
+  background: var(--perigo); color: #fff; border: 2px solid #fff;
+  box-shadow: 0 0 28px #ef4444cc; animation: pulsar .5s steps(2) infinite;
+}
+.carga { flex: none; background: var(--cartao); border-radius: 14px; padding: 10px 12px; }
+.carga__linha { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+.carga__valores strong { font-size: 1.9rem; font-variant-numeric: tabular-nums; }
+.carga__valores small { font-size: 1.05rem; color: var(--suave); margin-left: 10px; font-variant-numeric: tabular-nums; }
+.barra { height: 16px; background: #2e2e38; border-radius: 8px; overflow: hidden; }
+.barra__preenchimento { height: 100%; width: 0; background: var(--acento); transition: width .12s linear; }
+.rotulo { color: var(--suave); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.grade { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cartao {
+  background: var(--cartao); border-radius: 12px; padding: 6px 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 0;
+}
+.cartao strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.cartao small { color: var(--suave); font-size: .75rem; }
+.rodape { flex: none; margin: 0; text-align: center; color: var(--suave); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.acoes { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; } /* folga evita toque no vizinho com luva */
+.botao {
+  flex: none; min-height: 56px; border: 0; border-radius: 16px;
+  background: var(--acento); color: #00232b; font-size: 1.3rem; font-weight: 800; cursor: pointer;
+}
+.botao:active { filter: brightness(.8); }
+.botao:disabled { opacity: .5; }
+.botao--secundario { min-height: 48px; font-size: 1rem; background: var(--cartao); color: var(--texto); border: 1px solid var(--borda); }
+#zerar { border-color: var(--perigo); color: #fca5a5; } /* destrutivo distinto do Exportar */
+@keyframes piscar { 50% { opacity: .35; } }
+@keyframes pulsar { 50% { box-shadow: 0 0 6px #ef444466; } }
+@media (prefers-reduced-motion: reduce) { .semdados, .freio.ativo { animation: none; } }
+
+/* Telas curtas (SE, barras do Bluefy): comprime o que nao e critico */
+@media (max-height: 640px) {
+  .painel { gap: 6px; }
+  .rodape { display: none; }
+  .freio { padding: 6px; font-size: 1.4rem; }
+  .carga__valores strong { font-size: 1.6rem; }
+  .cartao small { display: none; }
+}
+
+/* Paisagem: duas colunas, velocidade+freio a esquerda, resto a direita */
+@media (orientation: landscape) and (max-height: 520px) {
+  .painel {
+    max-width: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "topo topo"
+      "aviso aviso"
+      "vel carga"
+      "vel grade"
+      "freio acoes"
+      "freio conectar";
+    gap: 6px 12px;
+    align-content: start;
+  }
+  .topo { grid-area: topo; }
+  .aviso { grid-area: aviso; }
+  .velocidade { grid-area: vel; }
+  .velocidade__valor { font-size: clamp(4.5rem, 34dvh, 9rem); }
+  .freio { grid-area: freio; align-self: stretch; display: flex; align-items: center; justify-content: center; }
+  .carga { grid-area: carga; }
+  .grade { grid-area: grade; }
+  .acoes { grid-area: acoes; }
+  #conectar { grid-area: conectar; min-height: 48px; }
+  .rodape { display: none; }
+}

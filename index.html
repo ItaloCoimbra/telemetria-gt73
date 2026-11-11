@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Telemetria GT73</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<main class="painel" id="painel" data-estado="desconectado">
+  <header class="topo">
+    <span class="status" id="status" role="status" aria-live="polite">Desconectado</span>
+    <span class="semdados" id="semdados" hidden>SEM DADOS</span>
+  </header>
+
+  <p class="aviso" id="aviso" hidden></p>
+
+  <section class="velocidade" aria-label="Velocidade">
+    <span class="velocidade__valor" id="velocidade">--</span>
+    <span class="velocidade__unidade">km/h</span>
+  </section>
+
+  <div class="freio" id="freio" aria-live="polite">FREIO</div>
+
+  <section class="carga" aria-label="Carga">
+    <div class="carga__linha">
+      <span class="rotulo">Carga</span>
+      <span class="carga__valores"><strong id="cargaA">--</strong><small id="cargaB">--</small></span>
+    </div>
+    <div class="barra"><div class="barra__preenchimento" id="barra"></div></div>
+  </section>
+
+  <section class="grade" aria-label="Viagem">
+    <div class="cartao"><span class="rotulo">Distância</span><strong id="distancia">0.00</strong><small>km</small></div>
+    <div class="cartao"><span class="rotulo">Tempo</span><strong id="tempo">00:00</strong><small>andando</small></div>
+    <div class="cartao"><span class="rotulo">Média</span><strong id="media">0</strong><small>km/h</small></div>
+    <div class="cartao"><span class="rotulo">Máxima</span><strong id="maxima">0</strong><small>km/h</small></div>
+    <div class="cartao"><span class="rotulo">Freadas</span><strong id="freadas">0</strong></div>
+    <div class="cartao"><span class="rotulo">Carga máx</span><strong id="cargaMax">0</strong></div>
+  </section>
+
+  <p class="rodape"><span id="frames">0</span> frames · <span id="descartados">0</span> descartados</p>
+
+  <div class="acoes">
+    <button class="botao botao--secundario" id="exportar" type="button">Exportar CSV</button>
+    <button class="botao botao--secundario" id="zerar" type="button">Zerar viagem</button>
+  </div>
+  <button class="botao" id="conectar" type="button">Conectar</button>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
