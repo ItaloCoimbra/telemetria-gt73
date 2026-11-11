@@ -4,10 +4,10 @@ import { numero, porcento, tempo, bateriaInicioAtual, nivelBateria, VAZIO } from
 import { lerAjustes, salvarAjustes, lerHistorico, adicionarViagem, apagarHistorico } from "./ui/armazenamento.js";
 import { desenharSparkline, desenharGrafico } from "./ui/graficos.js";
 import { iniciarAbas, renderizarHistorico } from "./ui/telas.js";
-import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar } from "./nuvem.js";
+import { API_PADRAO, novoEstadoNuvem, prepararEnvio, confirmarEnvio, enviar, testarChave } from "./nuvem.js";
 import { fatorDosPontos, adicionarPonto, aplicarFator, mediaRecente } from "./calibracao.js";
 
-const VERSAO_APP = "2.2";
+const VERSAO_APP = "2.3";
 const SERVICO = "0000ffe0-0000-1000-8000-00805f9b34fb";
 const CARACTERISTICA = "0000ffec-0000-1000-8000-00805f9b34fb";
 const LIMITE_SEM_DADOS_MS = 2000;
@@ -335,10 +335,14 @@ function statusNuvem(texto) {
   el.ajNuvemStatus.textContent = texto;
 }
 
-async function sincronizar() {
+async function sincronizar(manual = false) {
   const chave = estado.ajustes.chaveNuvem;
   if (!chave) return statusNuvem("Nuvem desligada: cole a chave acima.");
-  if (estado.enviando || !estado.viagem.amostras.length) return;
+  if (estado.enviando) return;
+  if (!estado.viagem.amostras.length) {
+    if (manual) return conferirChave(chave);
+    return statusNuvem("Chave salva. Aguardando dados da moto.");
+  }
   estado.enviando = true;
   const envio = prepararEnvio(estado.nuvem, estado.viagem.amostras, resumo(estado.viagem), performance.timeOrigin, VERSAO_APP);
   try {
@@ -349,6 +353,17 @@ async function sincronizar() {
     statusNuvem(`Sem envio agora (${erro?.message ?? erro}). Tento de novo em 1 min.`);
   } finally {
     estado.enviando = false;
+  }
+}
+
+async function conferirChave(chave) {
+  statusNuvem("Conferindo a chave...");
+  try {
+    const ok = await testarChave(API_PADRAO, chave);
+    statusNuvem(ok ? "Chave OK. Conecte na moto: a viagem é enviada sozinha a cada minuto."
+      : "Chave recusada: confira se copiou o API_TOKEN inteiro.");
+  } catch {
+    statusNuvem("Sem internet agora. Tento de novo em 1 min.");
   }
 }
 
@@ -462,9 +477,9 @@ function ligarEventos() {
   el.ajUnidade.addEventListener("change", aoMudarUnidade);
   el.ajChave.addEventListener("change", () => {
     mudarAjuste({ chaveNuvem: el.ajChave.value.trim() });
-    sincronizar();
+    sincronizar(true);
   });
-  el.ajEnviar.addEventListener("click", sincronizar);
+  el.ajEnviar.addEventListener("click", () => sincronizar(true));
   el.calRegistrar.addEventListener("click", registrarPontoCalibracao);
   el.calZerar.addEventListener("click", zerarCalibracao);
   window.addEventListener("resize", pedirDesenho);

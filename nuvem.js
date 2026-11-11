@@ -57,3 +57,9 @@ export async function enviar(endpoint, chave, envio) {
   });
   if (!r2.ok) throw new Error(`amostras recusadas (${r2.status})`);
 }
+
+/** Confere se a API aceita a chave (leitura simples, não grava nada). */
+export async function testarChave(endpoint, chave) {
+  const r = await fetch(`${endpoint.replace(/\/+$/, "")}/viagens`, { headers: { Authorization: `Bearer ${chave}` } });
+  return r.ok;
+}
